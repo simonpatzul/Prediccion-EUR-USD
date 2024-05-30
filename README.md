@@ -52,9 +52,13 @@ El objetivo principal de este proyecto es realizar un análisis exhaustivo de di
 - **Generación de Informes:**
   - Creación de informes detallados que resuman los hallazgos del análisis de datos.
   - Visualizaciones gráficas que ilustren las relaciones entre los indicadores económicos y el tipo de cambio.
+    ![Grafica1](Figure_1.png)
+
 - **Predicciones:**
   - Presentación de las predicciones del tipo de cambio EUR/USD basadas en los modelos desarrollados.
   - Análisis de escenarios y proyecciones futuras.
+    ![Grafica2](Figure_3.png)
+
 
 ## Tecnología Utilizada
 - **Python:** Para el procesamiento de datos, análisis y modelado predictivo.
