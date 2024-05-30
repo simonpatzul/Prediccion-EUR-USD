@@ -57,6 +57,8 @@ El objetivo principal de este proyecto es realizar un análisis exhaustivo de di
 - **Predicciones:**
   - Presentación de las predicciones del tipo de cambio EUR/USD basadas en los modelos desarrollados.
   - Análisis de escenarios y proyecciones futuras.
+    ![Grafica2](Figure_3.png)
+
 
 ## Tecnología Utilizada
 - **Python:** Para el procesamiento de datos, análisis y modelado predictivo.
