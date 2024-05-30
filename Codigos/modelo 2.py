@@ -7,16 +7,10 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv1D, Dense, Flatten, MaxPooling1D
 from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.regularizers import L2
-import tensorflow as tf
-import random
-import pandas as pd
 import os
 
 # Define la ruta relativa al archivo CSV desde el script actual
 filename = os.path.join('..', 'Datos', 'combined_data1.csv')
-
-# Imprime la ruta actual para depuración
-print(f"Buscando el archivo en: {os.path.abspath(filename)}")
 
 # Verifica si el archivo existe en la ubicación esperada
 if not os.path.isfile(filename):
@@ -35,7 +29,7 @@ datos_entrenamiento_escalados = escalador.fit_transform(datos_entrenamiento[['Op
 datos_prueba_escalados = escalador.transform(datos_prueba[['Open', 'Close']].values)
 
 # Crea tu conjunto de datos
-def crear_conjunto_de_datos(conjunto_de_datos, paso_temporal=5):
+def crear_conjunto_de_datos(conjunto_de_datos, paso_temporal=8):
     dataX, dataY = [], []
     for i in range(len(conjunto_de_datos) - paso_temporal - 1):
         a = conjunto_de_datos[i:(i + paso_temporal), :]
@@ -53,15 +47,15 @@ X_prueba = X_prueba.reshape(X_prueba.shape[0], X_prueba.shape[1], 2)
 
 # Crea tu modelo CNN
 modelo = Sequential()
-modelo.add(Conv1D(filters=44, kernel_size=3, activation='relu', input_shape=(5, 2), kernel_regularizer=L2(0.01)))
+modelo.add(Conv1D(filters=120, kernel_size=3, activation='relu', input_shape=(8, 2), kernel_regularizer=L2(0.01)))
 modelo.add(MaxPooling1D(pool_size=2))
 modelo.add(Flatten())
-modelo.add(Dense(21, activation='relu'))
+modelo.add(Dense(80, activation='relu'))
 modelo.add(Dense(units=2))  # Predice tanto el precio de apertura como el de cierre
 modelo.compile(optimizer='adam', loss='mean_squared_error')
 
 # Definir la parada temprana
-early_stopping = EarlyStopping(monitor='val_loss', patience=3, restore_best_weights=True)
+early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
 
 # Entrena el modelo con parada temprana
 historial_entrenamiento = modelo.fit(X_entrenamiento, y_entrenamiento, epochs=100, batch_size=22,
@@ -98,29 +92,72 @@ plt.ylabel('Pérdida')
 plt.legend()
 plt.show()
 
-# Haz predicciones para las últimas 5 ventanas de datos
-num_predicciones = 5
+# Haz predicciones para las últimas 200 ventanas de datos
+num_predicciones = 20
 predicciones = []
+real_open = []
 real_close = []
 
 for i in range(num_predicciones):
-    entrada_prueba = datos_prueba_escalados[-(5 + i):-i if i != 0 else None]
-    entrada_prueba = entrada_prueba.reshape(1, 5, 2)
+    entrada_prueba = datos_prueba_escalados[-(8 + i):-i if i != 0 else None]
+    entrada_prueba = entrada_prueba.reshape(1, 8, 2)
     prediccion = modelo.predict(entrada_prueba)
     prediccion = escalador.inverse_transform(prediccion)
     predicciones.append(prediccion[0])
+    real_open.append(datos_prueba['Open'].iloc[-(i + 1)])
     real_close.append(datos_prueba['Close'].iloc[-(i + 1)])
 
 # Convertir las predicciones en un DataFrame
 predicciones = np.array(predicciones)
 data = {
-    'Open': predicciones[:, 0],
-    'Close': predicciones[:, 1],
+    'Pred Open': predicciones[:, 0],
+    'Pred Close': predicciones[:, 1],
+    'Real Open': real_open,
     'Real Close': real_close
 }
 df = pd.DataFrame(data)
 
-# Mostrar las últimas 5 predicciones
-print("\nÚltimas 5 predicciones:")
-print(df)
+# Mostrar las últimas 20 predicciones
+print("\nÚltimas 20 predicciones:")
+print(df.tail(20))
 
+# Graficar las últimas 20 predicciones
+plt.plot(df.index, df['Real Close'], label='Real Close')
+plt.plot(df.index, df['Pred Close'], label='Pred Close')
+plt.title('Real vs Predicted Close Price')
+plt.xlabel('Time')
+plt.ylabel('Price')
+plt.legend()
+plt.show()
+
+# Calcular desfase usando una media móvil
+def calcular_desfase_media_movil(predicciones, valores_reales, ventana=8):
+    desfases = predicciones - valores_reales
+    desfase_movil = np.convolve(desfases, np.ones(ventana) / ventana, mode='valid')
+    return desfase_movil
+
+# Aplicar la función de media móvil a las últimas N predicciones y valores reales
+ventana = 1
+desfase_movil = calcular_desfase_media_movil(predicciones[:, 1], real_close[:len(predicciones)], ventana=ventana)
+
+# Ajustar las predicciones restando el desfase calculado
+predicciones_ajustadas = predicciones[ventana - 1:] - desfase_movil[:, np.newaxis]
+
+# Mostrar las predicciones ajustadas
+print("\nPredicciones Ajustadas:")
+print(predicciones_ajustadas)
+
+# Graficar las predicciones ajustadas vs los valores reales
+plt.plot(real_close[ventana - 1:], label='Real Close')
+plt.plot(predicciones_ajustadas[:, 1], label='Adjusted Pred Close')
+plt.title('Real vs Adjusted Predicted Close Price')
+plt.xlabel('Time')
+plt.ylabel('Price')
+plt.legend()
+plt.show()
+
+# Obtener las dos últimas predicciones del modelo CNN
+ultimas_predicciones_cnn = predicciones_prueba [-2:]
+print("\nÚltimas dos predicciones CNN (Open, Close):")
+for i, pred in enumerate(ultimas_predicciones_cnn):
+    print(f"Predicción {i+1}: Open = {pred[0]}, Close = {pred[1]}")

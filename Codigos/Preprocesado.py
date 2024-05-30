@@ -269,7 +269,8 @@ merged_data.fillna(method='ffill', inplace=True)
 merged_data.dropna(subset=['ActualValue1', 'ForecastValue1', 'PreviousValue1'
                                                              ''], inplace=True)
 # Guarda el archivo combinado en el escritorio
-merged_data.to_csv('C:/Users/oscar/Documents/pythonProject3/EUR-USD Github/Datos/combined_data1.csv', index=False)
+merged_data.to_csv(r'C:\Users\oscar\Documents\pythonProject3\EUR-USD\Datos\combined_data1.csv', index=False)
+
 
 print("Archivo combinado guardado con éxito.")
 print(merged_data)
